@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment and secrets
+.env
+.env.local
+
+# Testing & Caches
+.pytest_cache/
+.coverage
+htmlcov/
+.models/
+
+# Database and models
+data/*.db
+data/vector_db/chroma.sqlite3
+data/vector_db/*/
+*.gguf
+*.bin
+*.safetensors
