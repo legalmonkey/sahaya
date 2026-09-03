@@ -1,0 +1,2 @@
+# Day 1 deliberately uses Python's standard library only. The production LLM is
+# invoked through a locally installed llama.cpp binary, never a hosted API.
