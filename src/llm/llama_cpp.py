@@ -81,12 +81,25 @@ class LlamaCppProvider(LLMProvider):
 
         try:
             if hasattr(self._model, "create_chat_completion"):
-                res = self._model.create_chat_completion(
-                    messages=messages,
-                    temperature=self.temperature,
-                    repeat_penalty=self.repeat_penalty,
-                    max_tokens=self.max_tokens,
-                )
+                try:
+                    res = self._model.create_chat_completion(
+                        messages=messages,
+                        temperature=self.temperature,
+                        repeat_penalty=self.repeat_penalty,
+                        max_tokens=self.max_tokens,
+                    )
+                except ValueError as ve:
+                    if "system" in str(ve).lower():
+                        # Models like Gemma do not support a separate system role in their chat template
+                        merged_content = f"{system}\n\n{prompt}" if system else prompt
+                        res = self._model.create_chat_completion(
+                            messages=[{"role": "user", "content": merged_content}],
+                            temperature=self.temperature,
+                            repeat_penalty=self.repeat_penalty,
+                            max_tokens=self.max_tokens,
+                        )
+                    else:
+                        raise
                 content = res.get("choices", [{}])[0].get("message", {}).get("content", "")
             else:
                 formatted_prompt = f"{system}\n\nUser: {prompt}\nAssistant:" if system else prompt
