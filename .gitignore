@@ -25,19 +25,17 @@ htmlcov/
 data/raw/*.pdf
 data/raw/*
 !data/raw/.gitkeep
-data/vector_db/*
-!data/vector_db/.gitkeep
 data/models/*
 !data/models/.gitkeep
 data/*.db
-data/*.sqlite*
 *.pdf
-*.db
-*.sqlite*
 *.gguf
-*.bin
 *.safetensors
 *.pt
 *.onnx
+
+# Allow pre-computed vector database embeddings (~5MB)
+!data/vector_db/
+!data/vector_db/**
 
 scratch/
