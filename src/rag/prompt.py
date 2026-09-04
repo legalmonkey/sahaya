@@ -30,7 +30,7 @@ Do NOT fill the missing information from your own knowledge.
 Use only the supplied context."""
 
 
-def build_prompt(question: str, chunks) -> str:
+def build_prompt(question: str, chunks, history=None) -> str:
     parts = [
         "RETRIEVED SOURCES:",
         "",
@@ -46,16 +46,44 @@ def build_prompt(question: str, chunks) -> str:
             "",
         ])
 
+    parts.append("----------------------------------------")
+
+    # Add conversation history if present
+    turn_list = []
+    if history is not None:
+        if hasattr(history, "get_history_dicts"):
+            turn_list = history.get_history_dicts()
+        elif isinstance(history, list):
+            for item in history:
+                if hasattr(item, "to_dict"):
+                    turn_list.append(item.to_dict())
+                elif isinstance(item, dict):
+                    turn_list.append(item)
+
+    if turn_list:
+        parts.extend([
+            "CONVERSATION HISTORY (FOR CONTEXT / REFERENCE RESOLUTION ONLY):",
+            "",
+        ])
+        for idx, t in enumerate(turn_list, 1):
+            parts.extend([
+                f"Turn {idx}:",
+                f"User: {t.get('user_query', '').strip()}",
+                f"Assistant: {t.get('assistant_answer', '').strip()}",
+                "",
+            ])
+        parts.append("----------------------------------------")
+
     parts.extend([
-        "----------------------------------------",
         f"USER QUESTION: {question.strip()}",
         "",
         "INSTRUCTIONS:",
         "1. Answer the USER QUESTION using ONLY the facts directly provided in the RETRIEVED SOURCES above.",
-        "2. If the retrieved sources do not contain enough information to answer the question safely and accurately, output exactly:",
+        "2. If conversation history is provided, you may use it solely to understand pronouns, dose references, or follow-ups in the USER QUESTION. You must NEVER use conversation history as medical or factual evidence; all facts in your answer must be directly supported by RETRIEVED SOURCES.",
+        "3. If the retrieved sources do not contain enough information to answer the question safely and accurately, output exactly:",
         f'"{INSUFFICIENT_INFO_ANSWER}"',
-        "3. Do NOT use outside knowledge, unmentioned medical guidelines, or external organizations (such as WHO, CDC) unless they appear explicitly in the retrieved sources above.",
-        "4. Be direct, concise, and grounded.",
+        "4. Do NOT use outside knowledge, unmentioned medical guidelines, or external organizations (such as WHO, CDC) unless they appear explicitly in the retrieved sources above.",
+        "5. Be direct, concise, and grounded.",
         "",
         "ANSWER:",
     ])

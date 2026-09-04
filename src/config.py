@@ -26,6 +26,11 @@ def _load_dotenv(path: Path = ROOT / ".env") -> None:
 _load_dotenv()
 
 
+# Enforce offline defaults unless explicitly overridden
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
+
 def _get(key: str, default: str) -> str:
     return os.environ.get(key, default)
 
@@ -35,12 +40,22 @@ def _path(key: str, default: str) -> Path:
     return p if p.is_absolute() else ROOT / p
 
 
+def _path_optional(key: str, default: str | None = None) -> Path | None:
+    val = os.environ.get(key, default)
+    if not val:
+        return None
+    p = Path(val)
+    return p if p.is_absolute() else ROOT / p
+
+
 @dataclass(frozen=True)
 class Settings:
     # corpus / storage
     raw_pdf_dir: Path = _path("RAW_PDF_DIR", "data/raw")
     vector_db_dir: Path = _path("VECTOR_DB_DIR", "data/vector_db")
     collection_name: str = _get("COLLECTION_NAME", "sahaya_chunks")
+    database_path: Path = _path("DATABASE_PATH", "data/sahaya.db")
+    schema_migration_path: Path = _path("SCHEMA_MIGRATION_PATH", "db/migrations/001_shared_schema.sql")
 
     # embeddings
     embedding_model: str = _get("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
@@ -60,12 +75,20 @@ class Settings:
     chunk_overlap_sentences: int = int(_get("CHUNK_OVERLAP_SENTENCES", "2"))
 
     # LLM
-    llm_provider: str = _get("LLM_PROVIDER", "ollama")
+    llm_provider: str = _get("LLM_PROVIDER", "ollama")       # ollama | llama_cpp
     llm_model: str = _get("LLM_MODEL", "llama3.1")
     ollama_host: str = _get("OLLAMA_HOST", "http://127.0.0.1:11434")
     llm_timeout_s: float = float(_get("LLM_TIMEOUT_S", "180"))
     llm_temperature: float = float(_get("LLM_TEMPERATURE", "0.1"))
     llm_num_ctx: int = int(_get("LLM_NUM_CTX", "2048"))
+
+    # llama.cpp specific
+    llama_cpp_model_path: Path | None = _path_optional("LLAMA_CPP_MODEL_PATH", None)
+    llama_cpp_n_ctx: int = int(_get("LLAMA_CPP_N_CTX", "2048"))
+    llama_cpp_n_threads: int = int(_get("LLAMA_CPP_N_THREADS", "4"))
+
+    # conversation buffer
+    conversation_max_turns: int = int(_get("CONVERSATION_MAX_TURNS", "2"))
 
 
 SETTINGS = Settings()

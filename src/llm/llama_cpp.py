@@ -1,11 +1,11 @@
-"""FUTURE on-device provider (llama.cpp / GGUF) — intentionally NOT implemented on Day 1.
+"""On-device LLM provider using llama.cpp and local GGUF models (spec: §10 / §19 / §20).
 
-This file exists to make the migration seam explicit: the RAG pipeline imports only
-LLMProvider (src/llm/base.py), never Ollama. When the on-device runtime is chosen,
-implement generate() here (llama-cpp-python or a QNN bridge), set LLM_PROVIDER=llama_cpp,
-and nothing in src/rag, src/ingestion, main.py, or the output contract changes.
+Operates 100% offline with zero external network requests and no automatic model downloads.
 """
 from __future__ import annotations
+
+import os
+from pathlib import Path
 
 from .base import LLMError, LLMProvider
 
@@ -13,10 +13,91 @@ from .base import LLMError, LLMProvider
 class LlamaCppProvider(LLMProvider):
     name = "llama_cpp"
 
-    def __init__(self, model_path: str, **_kwargs) -> None:
-        raise LLMError(
-            "LlamaCppProvider is planned for a later phase. Set LLM_PROVIDER=ollama for Day 1."
-        )
+    def __init__(
+        self,
+        model_path: str | Path | None = None,
+        n_ctx: int = 2048,
+        n_threads: int = 4,
+        temperature: float = 0.1,
+    ) -> None:
+        self.model_path = Path(model_path) if model_path else None
+        self.n_ctx = n_ctx
+        self.n_threads = n_threads
+        self.temperature = temperature
+        self._model = None
 
-    def generate(self, prompt: str, system: str | None = None) -> str:  # pragma: no cover
-        raise LLMError("LlamaCppProvider is not implemented yet.")
+    def _ensure_loaded(self) -> None:
+        if self._model is not None:
+            return
+
+        if not self.model_path:
+            raise LLMError(
+                "LLAMA_CPP_MODEL_PATH is not configured. "
+                "Please set LLAMA_CPP_MODEL_PATH in your environment or .env to a valid local GGUF model file."
+            )
+
+        if not self.model_path.exists():
+            raise LLMError(
+                f"Llama.cpp GGUF model file not found at '{self.model_path}'. "
+                "Please ensure the local GGUF file exists and is accessible."
+            )
+
+        try:
+            import llama_cpp
+        except ImportError as e:
+            raise LLMError(
+                "llama-cpp-python is not installed. To use LLM_PROVIDER=llama_cpp, "
+                "please install the python package (e.g. pip install llama-cpp-python)."
+            ) from e
+
+        try:
+            self._model = llama_cpp.Llama(
+                model_path=str(self.model_path),
+                n_ctx=self.n_ctx,
+                n_threads=self.n_threads,
+                verbose=False,
+            )
+        except Exception as e:
+            raise LLMError(
+                f"Failed to load GGUF model from '{self.model_path}': {e}"
+            ) from e
+
+    def generate(self, prompt: str, system: str | None = None) -> str:
+        self._ensure_loaded()
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        try:
+            if hasattr(self._model, "create_chat_completion"):
+                res = self._model.create_chat_completion(
+                    messages=messages,
+                    temperature=self.temperature,
+                )
+                content = res.get("choices", [{}])[0].get("message", {}).get("content", "")
+            else:
+                formatted_prompt = f"{system}\n\nUser: {prompt}\nAssistant:" if system else prompt
+                res = self._model(
+                    formatted_prompt,
+                    temperature=self.temperature,
+                    stop=["User:", "\n\n\n"],
+                )
+                content = res.get("choices", [{}])[0].get("text", "")
+        except Exception as e:
+            raise LLMError(f"llama.cpp generation failed: {e}") from e
+
+        if not content or not content.strip():
+            raise LLMError("llama.cpp returned an empty response.")
+        return content.strip()
+
+    def health_check(self) -> None:
+        if not self.model_path:
+            raise LLMError(
+                "LLAMA_CPP_MODEL_PATH is not configured. "
+                "Set LLAMA_CPP_MODEL_PATH to a valid local GGUF model file."
+            )
+        if not self.model_path.exists():
+            raise LLMError(
+                f"Llama.cpp GGUF model file not found at '{self.model_path}'."
+            )

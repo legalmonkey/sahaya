@@ -13,6 +13,7 @@ import time
 
 from ..config import SETTINGS
 from ..llm.base import LLMError, create_llm_provider
+from .conversation import ConversationBuffer, contextualize_query
 from .prompt import INSUFFICIENT_INFO_ANSWER, SYSTEM_PROMPT, build_prompt
 from .retriever import RetrievedChunk, Retriever, get_retriever
 
@@ -36,7 +37,12 @@ class RAGPipeline:
         self.retriever = retriever
         self.llm = llm
 
-    def answer_query(self, query: str) -> dict:
+    def answer_query(
+        self,
+        query: str,
+        history: ConversationBuffer | list | None = None,
+        child_context: dict | None = None,
+    ) -> dict:
         t0 = time.perf_counter()
         question = (query or "").strip()
         if not question:
@@ -44,7 +50,12 @@ class RAGPipeline:
                     "answer": "", "sources": [], "confidence": 0.0,
                     "latency_ms": {"retrieval": 0, "llm": 0, "total": 0}}
 
-        chunks = self.retriever.retrieve(question)
+        # Contextualize retrieval query with multi-turn history if present
+        retrieval_query = contextualize_query(question, history=history, child_context=child_context)
+        chunks = self.retriever.retrieve(retrieval_query)
+        if not chunks and retrieval_query != question:
+            chunks = self.retriever.retrieve(question)
+
         retrieval_ms = int((time.perf_counter() - t0) * 1000)
 
         if not chunks:
@@ -57,7 +68,7 @@ class RAGPipeline:
                                "total": retrieval_ms},
             }
 
-        prompt = build_prompt(question, chunks)
+        prompt = build_prompt(question, chunks, history=history)
         t1 = time.perf_counter()
         try:
             answer = self.llm.generate(prompt, system=SYSTEM_PROMPT).strip()
@@ -94,9 +105,13 @@ def get_pipeline() -> RAGPipeline:
     return _DEFAULT
 
 
-def answer_query(query: str) -> dict:
+def answer_query(
+    query: str,
+    history: ConversationBuffer | list | None = None,
+    child_context: dict | None = None,
+) -> dict:
     """Single public RAG interface — the only entry point any UI is allowed to call."""
-    return get_pipeline().answer_query(query)
+    return get_pipeline().answer_query(query, history=history, child_context=child_context)
 
 
 def corpus_stats() -> dict:

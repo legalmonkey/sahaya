@@ -35,6 +35,8 @@ class RetrievedChunk:
             "section": self.section,
             "similarity": round(self.similarity, 4),
             "chunk_id": self.chunk_id,
+            "content": self.text,
+            "text": self.text,
         }
 
 
