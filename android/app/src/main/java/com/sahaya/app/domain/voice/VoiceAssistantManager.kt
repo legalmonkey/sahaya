@@ -52,6 +52,7 @@ class VoiceAssistantManager(
         val locale = when (lang) {
             "ta" -> Locale("ta", "IN")
             "en" -> Locale.ENGLISH
+            "mr" -> Locale("mr", "IN")
             else -> Locale("hi", "IN")
         }
         if (ttsReady) {
@@ -67,6 +68,7 @@ class VoiceAssistantManager(
         val localeStr = when (activeLanguage) {
             "ta" -> "ta-IN"
             "en" -> "en-IN"
+            "mr" -> "mr-IN"
             else -> "hi-IN"
         }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {

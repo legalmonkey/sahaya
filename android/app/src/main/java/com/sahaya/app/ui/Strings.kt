@@ -180,10 +180,56 @@ val TamilStrings = AppStrings(
     quickPrompt3 = "PMMVY திட்டத்தின் நன்மைகள் என்ன?"
 )
 
+val MarathiStrings = AppStrings(
+    appSubtitle = "आशा क्षेत्रीय सहाय्यक • गाव पिपरा",
+    highUrgency = "अति तातडीचे",
+    mediumUrgency = "मध्यम",
+    lowUrgency = "नियमित",
+    searchPlaceholder = "नाव किंवा कारण शोधा...",
+    emptyDatabase = "डेटाबेसमध्ये कोणतेही कुटुंब नोंदणीकृत नाही.",
+    noResults = "कोणतेही निकाल आढळले नाहीत.",
+    mothersLabel = "माता",
+    childrenLabel = "मुले",
+    visitedOnPrefix = "भेट दिली",
+    noRecentVisit = "अलिकडच्या काळात भेट नाही",
+    villagePrefix = "गाव",
+    categoryPrefix = "प्रवर्ग",
+    incomePrefix = "उत्पन्न गट",
+    activeFamilyContext = "📍 सक्रिय कुटुंब संदर्भ",
+    askAboutFamilyBtn = "🎙️ या कुटुंबाबद्दल प्रश्न विचारा",
+    immunoTitle = "💉 लसीकरण स्थिती (UIP Schedule)",
+    noChildrenText = "या कुटुंबात नोंदणीकृत बाळ नाही.",
+    maternalTitle = "🤰 माता आरोग्य व ANC तपासणी",
+    noMothersText = "या कुटुंबात नोंदणीकृत माता नाही.",
+    ancCountLabel = "ANC तपासणी संख्या",
+    lmpLabel = "शेवटची मासिक पाळी (LMP)",
+    riskSignsLabel = "धोक्याची लक्षणे",
+    recentCheckupsLabel = "अलिकडील क्लिनिकल तपासणी:",
+    dateLabel = "तारीख",
+    bpLabel = "रक्तदाब",
+    schemesTitle = "🏛️ सरकारी योजना पात्रता (Schemes)",
+    noSchemesText = "कोणतीही योजना जुळलेली नाही.",
+    voiceTitle = "सहया संवाद सहाय्यक",
+    generalProtocolMode = "📍 सामान्य प्रोटोकॉल मोड",
+    familyContextMode = { name -> "📍 संदर्भ: $name चे कुटुंब" },
+    newConversationBtn = "नवीन संभाषण",
+    greetingMessage = "नमस्ते आशा ताई! मी सहया आहे. लसीकरण, गरोदरपण जोखीम किंवा योजनांविषयी कोणताही प्रश्न बोला किंवा लिहून विचारा.",
+    listeningPlaceholder = "ऐकत आहे... कृपया बोला",
+    typeOrSpeakPlaceholder = "प्रश्न बोला किंवा लिहा...",
+    followupCue = "ऐकत आहे... पुढील प्रश्न विचारा (संदर्भ सुरक्षित)",
+    confidenceLabel = "✓ विश्वासार्हता स्कोअर:",
+    officialSourcesLabel = "अधिकृत प्रोटोकॉल स्रोत:",
+    listenAudioBtn = "उत्तर ऐका",
+    quickPrompt1 = "OPV लस वेळापत्रक काय आहे?",
+    quickPrompt2 = "गरोदरपणात उच्च रक्तदाबाचे धोके काय आहेत?",
+    quickPrompt3 = "PMMVY योजनेचे फायदे काय आहेत?"
+)
+
 fun getStrings(lang: String): AppStrings {
     return when (lang) {
         "en" -> EnglishStrings
         "ta" -> TamilStrings
+        "mr" -> MarathiStrings
         else -> HindiStrings
     }
 }
