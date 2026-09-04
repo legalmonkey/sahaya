@@ -2,3 +2,10 @@ __pycache__/
 *.py[cod]
 data/*.db
 *.gguf
+*.hprof
+android/.gradle/
+android/.idea/
+android/.kotlin/
+android/local.properties
+android/build/
+android/app/build/

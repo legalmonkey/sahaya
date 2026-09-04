@@ -25,6 +25,14 @@ class RetrievalTests(unittest.TestCase):
         weak = self.retriever.confidence(self.retriever.search("unrelated agricultural rainfall forecast"))
         self.assertGreater(strong, weak)
 
+    def test_multi_turn_followup_retrieval(self):
+        # When follow-up is ambiguous, folding prior query resolves correctly
+        prior_query = "When are oral polio vaccine doses due?"
+        followup = "what about the booster dose then?"
+        folded = prior_query + " " + followup
+        results = self.retriever.search(folded)
+        self.assertEqual(results[0].chunk["id"], "mohfw-nis-opv-002")
+
     def test_shared_schema_creates_required_tables(self):
         migration = (Path(__file__).parents[1] / "db" / "migrations" / "001_shared_schema.sql").read_text(encoding="utf-8")
         with sqlite3.connect(":memory:") as connection:

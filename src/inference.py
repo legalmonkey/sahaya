@@ -17,11 +17,19 @@ class SahayaPipeline:
         self.retriever = retriever
 
     def answer(self, query: str, conversation: list[dict] | None = None) -> dict:
-        # The optional argument deliberately reserves the Day 2 interface without
-        # applying any conversation rewriting or context handling today.
+        if not query or not query.strip():
+            raise ValueError("A question is required.")
+
+        # Fold conversation buffer into the retrieval query (last 1-2 prior turns)
+        retrieval_query = query.strip()
+        recent_turns: list[dict] = []
         if conversation:
-            raise ValueError("Conversation context is scheduled for Day 2 and is not enabled in Day 1.")
-        results = self.retriever.search(query)
+            recent_turns = [t for t in conversation if isinstance(t, dict)][-2:]
+            prior_terms = [t.get("query", "") for t in recent_turns if t.get("query")]
+            if prior_terms:
+                retrieval_query = " ".join(prior_terms) + " " + retrieval_query
+
+        results = self.retriever.search(retrieval_query)
         if not results or results[0].score <= 0:
             raise ValueError("No relevant official source was retrieved; Sahaya will not generate an ungrounded answer.")
         sources = [
@@ -29,18 +37,28 @@ class SahayaPipeline:
              "url": result.chunk["source_url"], "excerpt": result.chunk["text"], "score": round(result.score, 3)}
             for result in results if result.score > 0
         ]
-        prompt = self._prompt(query, sources)
+        prompt = self._prompt(query, sources, recent_turns)
         answer = self._run_llama(prompt)
         return {"answer": answer, "source_chunks": sources, "confidence": self.retriever.confidence(results)}
 
     @staticmethod
-    def _prompt(query: str, sources: list[dict]) -> str:
+    def _prompt(query: str, sources: list[dict], conversation: list[dict] | None = None) -> str:
         context = "\n\n".join(f"[{item['id']}] {item['excerpt']}" for item in sources)
+        history = ""
+        if conversation:
+            history_lines = []
+            for t in conversation[-2:]:
+                q = str(t.get("query", "")).strip()
+                a = str(t.get("answer", "")).strip()
+                if q and a:
+                    history_lines.append(f"PREVIOUS QUESTION: {q}\nPREVIOUS ANSWER: {a}")
+            if history_lines:
+                history = "\n\n" + "\n\n".join(history_lines) + "\n\n"
         return (
             "You are Sahaya, an offline assistant for ASHA workers. Answer only from the official source excerpts below. "
             "If the excerpts do not support an answer, say that the source does not contain enough information. "
             "Do not give dosage or diagnosis advice. Cite source IDs in square brackets. Keep the answer short.\n\n"
-            f"OFFICIAL SOURCE EXCERPTS:\n{context}\n\nQUESTION: {query}\nANSWER:"
+            f"OFFICIAL SOURCE EXCERPTS:\n{context}{history}\nQUESTION: {query}\nANSWER:"
         )
 
     @staticmethod
