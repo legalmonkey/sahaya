@@ -17,9 +17,11 @@ class LlamaCppProvider(LLMProvider):
     def __init__(
         self,
         model_path: str | Path | None = None,
-        n_ctx: int = 2048,
-        n_threads: int = 4,
+        n_ctx: int = 8192,
+        n_threads: int | None = None,
         temperature: float = 0.1,
+        repeat_penalty: float = 1.15,
+        max_tokens: int = 200,
     ) -> None:
         if model_path:
             p = Path(model_path)
@@ -27,8 +29,10 @@ class LlamaCppProvider(LLMProvider):
         else:
             self.model_path = None
         self.n_ctx = n_ctx
-        self.n_threads = n_threads
+        self.n_threads = n_threads if n_threads is not None else max(4, os.cpu_count() or 4)
         self.temperature = temperature
+        self.repeat_penalty = repeat_penalty
+        self.max_tokens = max_tokens
         self._model = None
 
     def _ensure_loaded(self) -> None:
@@ -60,6 +64,7 @@ class LlamaCppProvider(LLMProvider):
                 model_path=str(self.model_path),
                 n_ctx=self.n_ctx,
                 n_threads=self.n_threads,
+                n_batch=512,
                 verbose=False,
             )
         except Exception as e:
@@ -79,6 +84,8 @@ class LlamaCppProvider(LLMProvider):
                 res = self._model.create_chat_completion(
                     messages=messages,
                     temperature=self.temperature,
+                    repeat_penalty=self.repeat_penalty,
+                    max_tokens=self.max_tokens,
                 )
                 content = res.get("choices", [{}])[0].get("message", {}).get("content", "")
             else:
@@ -86,6 +93,8 @@ class LlamaCppProvider(LLMProvider):
                 res = self._model(
                     formatted_prompt,
                     temperature=self.temperature,
+                    repeat_penalty=self.repeat_penalty,
+                    max_tokens=self.max_tokens,
                     stop=["User:", "\n\n\n"],
                 )
                 content = res.get("choices", [{}])[0].get("text", "")

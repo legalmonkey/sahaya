@@ -39,3 +39,5 @@ data/*.sqlite*
 *.safetensors
 *.pt
 *.onnx
+
+scratch/

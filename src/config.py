@@ -80,11 +80,11 @@ class Settings:
     ollama_host: str = _get("OLLAMA_HOST", "http://127.0.0.1:11434")
     llm_timeout_s: float = float(_get("LLM_TIMEOUT_S", "180"))
     llm_temperature: float = float(_get("LLM_TEMPERATURE", "0.1"))
-    llm_num_ctx: int = int(_get("LLM_NUM_CTX", "2048"))
+    llm_num_ctx: int = int(_get("LLM_NUM_CTX", "8192"))
 
     # llama.cpp specific
     llama_cpp_model_path: Path | None = _path_optional("LLAMA_CPP_MODEL_PATH", None)
-    llama_cpp_n_ctx: int = int(_get("LLAMA_CPP_N_CTX", "2048"))
+    llama_cpp_n_ctx: int = int(_get("LLAMA_CPP_N_CTX", "8192"))
     llama_cpp_n_threads: int = int(_get("LLAMA_CPP_N_THREADS", "4"))
 
     # conversation buffer

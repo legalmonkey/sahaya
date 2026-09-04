@@ -156,6 +156,84 @@ class TfidfRetriever(Retriever):
         ) for sim, c in scored[:k] if sim >= self.threshold]
 
 
+# ---------------------------------------------------------------------------
+# Generic chunk reranking
+# ---------------------------------------------------------------------------
+
+def _extract_age_phrases(text: str) -> list[str]:
+    """Extract age/time phrases for exact matching (generic regex, not query-specific)."""
+    phrases: list[str] = []
+    for m in re.finditer(
+        r'\b(?:at\s+)?(?:\d+(?:-\d+)?\s+(?:week|month|year)s?|birth)\b', text
+    ):
+        phrases.append(m.group())
+    return phrases
+
+
+def rerank_chunks(
+    query: str, chunks: list[RetrievedChunk], max_chunks: int = 2
+) -> list[RetrievedChunk]:
+    """Rerank retrieved chunks by combined semantic + lexical relevance with diversity.
+
+    Uses generic signals (lexical overlap, phrase matching, source quality, diversity)
+    instead of query-specific hardcoded rules.
+    """
+    if not chunks:
+        return []
+    if len(chunks) <= max_chunks:
+        return list(chunks)
+
+    q_tokens = set(_tok(query))
+    q_lower = query.lower()
+    age_phrases = _extract_age_phrases(q_lower)
+
+    scored: list[tuple[float, RetrievedChunk]] = []
+    for c in chunks:
+        score = c.similarity  # base: semantic similarity
+
+        c_tokens = set(_tok(c.text))
+        c_lower = c.text.lower()
+
+        # Lexical overlap: fraction of query content words found in chunk
+        if q_tokens:
+            overlap = len(q_tokens & c_tokens) / len(q_tokens)
+            score += 0.15 * overlap
+
+        # Exact age/time phrase match
+        for phrase in age_phrases:
+            if phrase in c_lower:
+                score += 0.1
+
+        # Source quality: structured/official documents get mild generic boost
+        doc_lower = c.document.lower()
+        if any(kw in doc_lower for kw in ("schedule", "handbook", "guideline")):
+            score += 0.05
+
+        scored.append((score, c))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    # Select with diversity: skip near-duplicate chunks (Jaccard > 0.7)
+    selected: list[RetrievedChunk] = []
+    seen_token_sets: list[set[str]] = []
+    for _, c in scored:
+        c_tok_set = set(_tok(c.text))
+        is_dup = False
+        for seen in seen_token_sets:
+            if c_tok_set and seen:
+                union = len(c_tok_set | seen)
+                if union > 0 and len(c_tok_set & seen) / union > 0.7:
+                    is_dup = True
+                    break
+        if not is_dup:
+            selected.append(c)
+            seen_token_sets.append(c_tok_set)
+        if len(selected) >= max_chunks:
+            break
+
+    return selected
+
+
 def get_retriever() -> Retriever:
     store = VectorStore(SETTINGS.vector_db_dir, SETTINGS.collection_name)
     if SETTINGS.retriever == "embedding":
