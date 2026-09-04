@@ -21,10 +21,21 @@ tests/
 htmlcov/
 .models/
 
-# Database and models
+# Heavy data, PDFs, databases, and model weights
+data/raw/*.pdf
+data/raw/*
+!data/raw/.gitkeep
+data/vector_db/*
+!data/vector_db/.gitkeep
+data/models/*
+!data/models/.gitkeep
 data/*.db
-data/vector_db/chroma.sqlite3
-data/vector_db/*/
+data/*.sqlite*
+*.pdf
+*.db
+*.sqlite*
 *.gguf
 *.bin
 *.safetensors
+*.pt
+*.onnx

@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from ..config import ROOT
 from .base import LLMError, LLMProvider
 
 
@@ -20,7 +21,11 @@ class LlamaCppProvider(LLMProvider):
         n_threads: int = 4,
         temperature: float = 0.1,
     ) -> None:
-        self.model_path = Path(model_path) if model_path else None
+        if model_path:
+            p = Path(model_path)
+            self.model_path = p if p.is_absolute() else ROOT / p
+        else:
+            self.model_path = None
         self.n_ctx = n_ctx
         self.n_threads = n_threads
         self.temperature = temperature
